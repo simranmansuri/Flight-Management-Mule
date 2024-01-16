@@ -1,0 +1,14 @@
+{
+  "sampleData": {
+<<<<<<< HEAD
+    "6313ac3d-11a4-45f2-8666-e36e217fbf08": {
+      "payload": "sample_data/java_2.dwl"
+    },
+    "d6aa7af3-f62c-4b28-a851-643d95f9aca4": {
+=======
+    "318660d4-c4a1-41aa-b1d9-0de115ade44c": {
+>>>>>>> branch 'master' of https://github.com/Ishika0601/Flight-Management-Mule.git
+      "payload": "sample_data/java_1.dwl"
+    }
+  }
+}

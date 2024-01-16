@@ -1,0 +1,23 @@
+%dw 2.0
+
+type auto_40663812_1c83_424e_8b73_bf180e8435d4_Input_Attributes = {|
+  clientCertificate?: {|
+    publicKey?: {|  |}, 
+    "type"?: String, 
+    encoded?: Binary
+  |}, 
+  headers: {|  |}, 
+  listenerPath: String, 
+  method: String, 
+  queryParams: {|  |}, 
+  queryString: String, 
+  relativePath: String, 
+  remoteAddress: String, 
+  requestPath: String, 
+  requestUri: String, 
+  scheme: String, 
+  uriParams: {| bookingId: String |}, 
+  version: String, 
+  localAddress: String
+|}
+

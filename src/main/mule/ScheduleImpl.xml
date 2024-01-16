@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="showAllSchedules" doc:id="4bfb6321-9c88-4b2a-8f15-adc0b9cd84d8" >
+		<http:request method="GET" doc:name="showAllSchedules" doc:id="7cfdd5df-22d6-4e49-b895-75f075047caf" config-ref="HTTP_Request_configuration" path="/schedule/showAllSchedules"/>
+	</sub-flow>
+	<sub-flow name="showScheduleById" doc:id="4e631896-1673-4206-a5a2-dd05ca9809e5" >
+		<try doc:name="Try" doc:id="25da9e0c-e67a-450e-9111-a5e55b76573a" >
+			<set-variable value="#[vars.scheduleId]" doc:name="Set Variable" doc:id="95a45ed0-d3dd-4828-9878-f12850cbee9f" variableName="data" />
+			<validation:is-number doc:name="Id is number" doc:id="608f8076-9dda-4334-aa38-1a7f53abd57b" value="#[vars.scheduleId]" numberType="LONG">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="GET" doc:name="showScheduleById" doc:id="f2f22c03-9388-45fa-8bca-64da8b332ed2" config-ref="HTTP_Request_configuration" path="/schedule/showById/{scheduleId}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"scheduleId" : vars.scheduleId
+}]]]></http:uri-params>
+			</http:request>
+		</try>
+	</sub-flow>
+	<sub-flow name="showScheduleBySource" doc:id="7161dd46-aa9d-4398-8c33-c9db7165242d" >
+		<try doc:name="Try" doc:id="5af2f126-f276-4fef-a0df-0b9656c13912" >
+			<set-variable value="#[vars.airportName]" doc:name="Set Variable" doc:id="86b97edc-2e11-4fa8-ac87-88253293722b" variableName="data" />
+			<validation:is-not-blank-string doc:name="Source not blank string" doc:id="4713e2b6-956f-46c6-8926-74e05c113434" value="#[vars.airportName]" />
+			<http:request method="GET" doc:name="showScheduleBySource" doc:id="3de4d9b7-104f-4144-baff-dde181936fbb" config-ref="HTTP_Request_configuration" path="/schedule/showBySourceName/{srcName}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"srcName" : vars.airportName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="8792892e-fbfc-4c61-aa24-f5bbcd9e8424" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="227c470f-1695-40a0-9c41-7df578fb9c01" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Source name cannot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showScheduleByDestination" doc:id="f5455794-5f77-4c65-b789-58687a9dd529" >
+		<try doc:name="Try" doc:id="1ab0d7c9-4d3a-400b-9763-29ef788c76e8" >
+			<set-variable value="#[vars.airportName]" doc:name="Set Variable" doc:id="b795ed1f-05e3-42b9-970b-8246399f7416" variableName="data" />
+			<validation:is-not-blank-string doc:name="Destination not blank string" doc:id="98a006d7-b6f0-42a2-8ea0-8a4190f876b5" value="#[vars.airportName]" />
+			<http:request method="GET" doc:name="showScheduleByDestination" doc:id="485cf94f-d79a-422d-910c-65348e52b056" config-ref="HTTP_Request_configuration" path="/schedule/showByDestinationName/{dstName}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"dstName" : vars.airportName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7f165b67-aea0-4204-b806-585f00dd7639" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="48831a1e-18ac-4a75-a0eb-033b344ba19a" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Destination name cannot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showScheduleByArrival" doc:id="01fd4d58-9d0b-4a06-a601-65c28dc2ea4a" >
+		<try doc:name="Try" doc:id="7bfc2bd2-75c6-4094-887d-4467c64d539c" >
+			<set-variable value="#[vars.arrivalDate]" doc:name="Set Variable" doc:id="34f3795f-0cd2-4c23-a5d3-53c605e6a60e" variableName="data"/>
+			<validation:is-not-blank-string doc:name="Arrival not blank string" doc:id="4d4f56ff-7071-449f-afc5-1d649214f414" value="#[vars.arrivalDate]"/>
+			<validation:is-time doc:name="Arrival date format" doc:id="cbc6ae4a-9c01-4667-84ab-536b853899a0" time="#[vars.arrivalDate]" pattern="yyyy-MM-dd"/>
+			<validation:is-true doc:name="Arrival date greater than 2022" doc:id="3642f749-804b-42d6-abdb-c58321933b6e" expression='#[vars.arrivalDate as Date {format:"yyyy-MM-dd"} &gt; "2022-01-01" as Date {format:"yyyy-MM-dd"}]'/>
+			<http:request method="GET" doc:name="showScheduleByArrival" doc:id="82f57c41-f7c2-40aa-9844-94b5f3ffd6e7" config-ref="HTTP_Request_configuration" path="/schedule/showByArrivalDate/{arrival}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"arrival" : vars.arrivalDate
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ca469674-6b73-40a1-9c07-87d26369bd78" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="716d2462-cdc9-4668-b8fa-1ddebc2a5592" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival date cannot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="47c87a1f-77e7-43b0-9680-bdde21f16ae1" type="VALIDATION:INVALID_TIME">
+					<ee:transform doc:name="Transform Message" doc:id="600f469b-e6f3-4753-a3f6-8202fe94fe93" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival date should be in yyyy-MM-dd format"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="fe61510e-85a9-4a9d-a733-11cfb2a9e416" type="VALIDATION:INVALID_BOOLEAN">
+					<ee:transform doc:name="Transform Message" doc:id="464fb102-c29d-4cbd-8a3a-b0495d12d4bc" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival should be greater than 2022-01-01"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			
+</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showScheduleByDeparture" doc:id="faf7476e-e3e1-4696-8111-919c963c8762" >
+		<try doc:name="Try" doc:id="cfc305c1-1d2d-4a3b-8ff6-62e5d6a84eec" >
+			<set-variable value="#[vars.departureDate]" doc:name="Set Variable" doc:id="90bf88ad-5966-4af5-8ea2-995b71832ddb" variableName="data" />
+			<validation:is-not-blank-string doc:name="Departure not blank string" doc:id="32052bc1-c5dc-4935-b126-b911359dd4ac" value="#[vars.departureDate]" />
+			<validation:is-time doc:name="Departure date format" doc:id="183fbd83-edd3-4c03-8688-dd23c69091b6" time="#[vars.departureDate]" pattern="yyyy-MM-dd" />
+			<validation:is-true doc:name="Departure date greater than 2022" doc:id="99504438-a0aa-4057-a344-cb1fad72782c" expression='#[vars.departureDate as Date {format:"yyyy-MM-dd"} &gt; "2022-01-01" as Date {format:"yyyy-MM-dd"}]' />
+			<http:request method="GET" doc:name="showScheduleByDeparture" doc:id="f33f2476-a657-4d73-a8e7-e16b9eaf0586" config-ref="HTTP_Request_configuration" path="/schedule/showByDepartureDate/{departure}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"departure" : vars.departureDate
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b893f0d3-382e-42d3-a69b-054661dbbc09" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="282bf8ff-0d61-4a8c-b726-1f3b2417dfd5" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Departure date cannot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="135cc13d-ccdc-4ea1-a620-87a1eaf07ba6" type="VALIDATION:INVALID_TIME" >
+					<ee:transform doc:name="Transform Message" doc:id="d0834e2d-a944-425f-9b15-be41edf156b7" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Departure date should be in yyyy-MM-dd format"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1b79ffad-2496-4079-ae6b-050ed0175754" type="VALIDATION:INVALID_BOOLEAN" >
+					<ee:transform doc:name="Transform Message" doc:id="f6cc2922-115c-4fef-893c-1aaa4b9b7f52" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Departure should be greater than 2022-01-01"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showBySourceInXml" doc:id="adbc59c5-9504-4776-86a7-ad85d44e6d80" >
+		<try doc:name="Try" doc:id="6ec60630-2c9f-48ce-b311-142184456c77" >
+			<set-variable value="#[vars.airportName]" doc:name="Set Variable" doc:id="84aa8d21-4590-47d3-8af1-ab5c603fb9d2" variableName="data" />
+			<validation:is-not-blank-string doc:name="Source not blank string" doc:id="3d2491f5-5820-4581-8d03-22c26e2a1077" value="#[vars.airportName]" />
+			<http:request method="GET" doc:name="showScheduleBySource" doc:id="1f6a87c1-059b-479a-8532-67134766c3f7" config-ref="HTTP_Request_configuration" path="/schedule/showBySourceName/{srcName}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"srcName" : vars.airportName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="be13843b-9871-4dc8-bfc4-2392dbd47d10" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="aab51b90-20f3-4f49-a147-2ff141f52cba" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Source name cannot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="779d64e8-bd57-421a-831b-418d42a4fd01" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+schedules: {noOfSchedules: sizeOf(payload),
+	(payload map (object, index) ->
+	{
+		schedule: {
+			id: object.sid,
+			departureTime: object.departureTime,
+			arrivalTime: object.arrivalTime,
+			sourceAirport: object.sourceAirport,
+			destinationAirport: object.destinationAirport
+		}
+	}
+)
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable resource="ScheduleDWOutput1.dwl" variableName="ScheduleDWOutput1" />
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="6ba29abe-eacc-4c1b-bb4d-38d2bb7304e6" message="#[vars.ScheduleDWOutput]"/>
+	</sub-flow>
+	<sub-flow name="showByDepartureInXml" doc:id="e0c64abe-7cc0-49ac-b5e4-f1e4fdaa29bc" >
+		<try doc:name="Try" doc:id="d477aa9b-c07e-4ad4-8202-d7a555ec1de0" >
+			<set-variable value="#[vars.departureDate]" doc:name="Set Variable" doc:id="8176cd49-0259-44cc-8ac0-b13bbb011823" variableName="data" />
+			<validation:is-not-blank-string doc:name="Departure not blank string" doc:id="9ecace3d-7455-4fe7-9d1d-54c3e7cc363a" value="#[vars.departureDate]" />
+			<validation:is-time doc:name="Departure date format" doc:id="76fa05e4-1744-4510-91aa-17c654b52b83" time="#[vars.departureDate]" pattern="yyyy-MM-dd" />
+			<validation:is-true doc:name="Departure date greater than 202" doc:id="9502e3e6-5983-4fdc-a323-5efecb9a4a57" expression='#[vars.departureDate as Date {format:"yyyy-MM-dd"} &gt; "2022-01-01" as Date {format:"yyyy-MM-dd"}]' />
+			<http:request method="GET" doc:name="showScheduleByDeparture" doc:id="0a537749-fbcf-4c43-ba83-e1599ce15c64" config-ref="HTTP_Request_configuration" path="/schedule/showByDepartureDate/{departure}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"departure" : vars.departureDate
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="296ce1eb-107a-49c2-8aeb-643759bd616c" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="aaa5d3f9-a66e-4ee6-890d-ae771148c6b7" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Departure date cannot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="55a796fa-cfab-4c9f-ba34-a0fad823906d" type="VALIDATION:INVALID_TIME" >
+					<ee:transform doc:name="Transform Message" doc:id="fbd7c405-7f00-4703-b4c7-50f8e2620746" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Departure date should be in yyyy-MM-dd format"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="04356fac-0285-4815-a1d4-e5b37ee91dc6" type="VALIDATION:INVALID_BOOLEAN" >
+					<ee:transform doc:name="Transform Message" doc:id="be3dcd63-2ac5-4d95-84c5-92dd5333a623" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Departure should be greater than 2022-01-01"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="75fda7c6-3184-4974-9962-56e9bb56c0fc" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+schedules: {noOfSchedules: sizeOf(payload),
+	(payload map (object, index) ->
+	{
+		schedule: {
+			id: object.sid,
+			departureTime: object.departureTime,
+			arrivalTime: object.arrivalTime,
+			sourceAirport: object.sourceAirport,
+			destinationAirport: object.destinationAirport
+		}
+	}
+)
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable resource="ScheduleDWOutput2.dwl" variableName="ScheduleDWOutput2" />
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="2bce219e-6ddf-453c-890b-840cb2c444ae" message="#[vars.ScheduleDWOutput2]"/>
+	</sub-flow>
+	<sub-flow name="addSchedule" doc:id="e0d94a21-1282-4175-b831-4653db2597ad" >
+		<try doc:name="Try" doc:id="d0707a78-4278-461a-b23e-8257f2468a84" >
+			<validation:is-true doc:name="Departure and arrival time valid" doc:id="8e11908d-b05b-4afb-b75f-2f77631f36e8" expression="#[(payload.departureTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;} &gt; now() as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;}) and (payload.arrivalTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;} &gt; now() as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;})]">
+				<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="SCHEDULE:INVALID_TIME" />
+			</validation:is-true>
+			<validation:is-true doc:name="Arrival greater than departure" doc:id="1c23228b-fd13-4ba0-90c9-fa6dfdaed424" expression="#[(payload.arrivalTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;}) &gt; (payload.departureTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;})]">
+				<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="SCHEDULE:INVALID_ARRDEP" />
+			</validation:is-true>
+			<validation:is-true doc:name="Source and destination are not same" doc:id="3bf5ac95-252f-4359-b6f0-be73af4e0494" expression="#[payload.sourceAirport.airportCode != payload.destinationAirport.airportCode]">
+				<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="SCHEDULE:INVALID_SRCDST" />
+			</validation:is-true>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="399cc6b2-d92a-41d2-8af7-94eb66554c0d" type="SCHEDULE:INVALID_TIME">
+					<ee:transform doc:name="Transform Message" doc:id="4dd995b6-6d5f-4546-b117-44db6540fc82" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival time or departure time is invalid"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e9584729-3045-47a0-815a-95fc20b2ece6" type="SCHEDULE:INVALID_SRCDST">
+					<ee:transform doc:name="Transform Message" doc:id="0f2f16c4-d557-4e5d-9311-33eac7aa75c7" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Source airport and destination airport cannot be same"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f1882a11-47a9-4375-b461-ae726525fa09" type="SCHEDULE:INVALID_ARRDEP">
+					<ee:transform doc:name="Transform Message" doc:id="88a313bb-c153-49e5-b43a-cb66a2d0870b" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival time should be greater than departure time"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<http:request method="POST" doc:name="addSchedule" doc:id="5a888623-f52e-4411-8338-f8364e57dda1" config-ref="HTTP_Request_configuration" path="/schedule/addSchedule" />
+	</sub-flow>
+	<sub-flow name="modifySchedule" doc:id="7d27715a-b42f-4af7-8a78-aaae3f68c529" >
+		<try doc:name="Try" doc:id="40e6e247-821c-4503-8e81-287842163412" >
+			<set-variable value="#[vars.scheduleId]" doc:name="Set Variable" doc:id="6a8bf0f4-4008-421f-903d-d3d544cbe392" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="b569ef0a-d4b8-4f27-987b-f3e0999e1709" value="#[vars.scheduleId]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<validation:is-true doc:name="Departure and arrival time valid" doc:id="ad977669-83a4-4890-8feb-fe1971e6e060" expression="#[(payload.departureTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;} &gt; now() as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;}) and (payload.arrivalTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;} &gt; now() as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;})]" >
+				<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="SCHEDULE:INVALID_TIME" />
+			</validation:is-true>
+			<validation:is-true doc:name="Arrival greater than departure" doc:id="e27a2d19-3e70-47dd-a6bd-e69d026b5030" expression="#[(payload.arrivalTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;}) &gt; (payload.departureTime as LocalDateTime {format:&quot;yyyy-MM-dd'T'HH:mm:ss&quot;})]" >
+				<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="SCHEDULE:INVALID_ARRDEP" />
+			</validation:is-true>
+			<validation:is-true doc:name="Source and destination are not same" doc:id="7514a32e-4bf7-4eab-abd4-9d17027d5660" expression="#[payload.sourceAirport.airportCode != payload.destinationAirport.airportCode]" >
+				<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="SCHEDULE:INVALID_SRCDST" />
+			</validation:is-true>
+			<http:request method="PUT" doc:name="modifySchedule" doc:id="47df41b6-29c2-45cc-b175-97e756d67e40" config-ref="HTTP_Request_configuration" path="/schedule/modifySchedule/{scheduleId}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"scheduleId" : vars.scheduleId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="76fb805f-8d62-4dc8-b6ff-557c34252ab7" type="SCHEDULE:INVALID_TIME" >
+					<ee:transform doc:name="Transform Message" doc:id="dc934ee8-8efe-40ea-bff6-f8f5a0fd2822" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival time or departure time is invalid"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a4fd223f-d494-4466-b8d5-d4e15d20ae57" type="SCHEDULE:INVALID_SRCDST" >
+					<ee:transform doc:name="Transform Message" doc:id="b8238a4a-04f8-4cb7-b347-40df092b4f6d" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Source airport and destination airport cannot be same"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="24258035-76bb-45e0-9969-085df8c3787d" type="SCHEDULE:INVALID_ARRDEP" >
+					<ee:transform doc:name="Transform Message" doc:id="fa6c3c30-49f5-4b36-bcf9-3c11e11a50e2" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Arrival time should be greater than departure time"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="deleteSchedule" doc:id="afc752ea-f305-4beb-bf64-9a42f44e07b6" >
+		<try doc:name="Try" doc:id="a292064e-22f7-456f-a0f2-f87d51311f5f" >
+			<set-variable value="#[vars.scheduleId]" doc:name="Set Variable" doc:id="ccbea862-bbc3-4f91-a286-2cd33f035690" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="3e02413a-0f94-4bd4-990a-c5a0d83b4c4d" value="#[vars.scheduleId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="DELETE" doc:name="deleteSchedule" doc:id="2bf6d4e9-b158-40d0-a81a-5c86e4d0b1bb" config-ref="HTTP_Request_configuration" path="/schedule/deleteSchedule/{scheduleId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"scheduleId" : vars.scheduleId
+}]]]></http:uri-params>
+			</http:request>
+			<set-payload value="Schedule deleted successfully" doc:name="Set Payload" doc:id="6dc2ae2c-5268-43c9-a637-ac0f0360cc91" />
+		</try>
+	</sub-flow>
+	<sub-flow name="patchSchedule" doc:id="8764b712-6bd0-4072-a95a-64079227981f" >
+		<try doc:name="Try" doc:id="5416da11-50d7-438b-b58a-44234399a7c2" >
+			<set-variable value="#[vars.scheduleId]" doc:name="Set Variable" doc:id="34989c5a-53cd-4c66-9a7a-08c353a20da5" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="46d23abe-8516-40c0-9b2c-44bd10453e71" value="#[vars.scheduleId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="PATCH" doc:name="patchSchedule" doc:id="da3a0b86-e87e-4cb1-930a-f0b3ffd15b8c" config-ref="HTTP_Request_configuration" path="/schedule/patchSchedule/{scheduleId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="SCHEDULE:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"scheduleId" : vars.scheduleId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="798c22f2-c7a0-42b0-9588-7b2ac37c2f17" type="HTTP:INTERNAL_SERVER_ERROR">
+					<ee:transform doc:name="Transform Message" doc:id="72a2ff74-4812-4bfd-b44d-1c836059cafc" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid schedule data given for patch"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+
+</mule>

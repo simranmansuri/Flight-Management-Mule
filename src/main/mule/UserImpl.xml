@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="showAllUsersInXml" doc:id="9ba72bc2-58d0-4830-aa5e-18ef3b5df78f" >
+		<http:request method="GET" doc:name="Request" doc:id="b04a0d39-ddf9-43f9-902b-5003b47a69bd" path="/user/showAllUsers" config-ref="HTTP_Request_configuration">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"userType" : attributes.queryParams.userType
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="d2aa2516-04ac-4509-84dd-8b66da92c91e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+airports: {noOfUsers: sizeOf(payload),
+	(payload map (object, index) ->
+	{
+		user: {
+			id: object.UserID,
+			userType: object.userType,
+			userName: object.userName,
+			email: object.email,
+			userPassword: object.userPassword,
+			userPhone: object.userPhone
+			
+		}
+	}
+)
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable resource="userDWoutput.dwl" variableName="userDWoutput" />
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="8f76a7e1-6fd8-4dbd-a8c8-9b1e1537bf62" message="#[vars.userDWoutput]"/>
+	</sub-flow>
+	<sub-flow name="showAllUsers" doc:id="a95cd10b-9cf1-4efe-9768-0f0c438dbcf3" >
+		<http:request method="GET" doc:name="showAllUsers" doc:id="53df6da1-18e3-4090-822c-9842f6bf9ca6" config-ref="HTTP_Request_configuration" path="/user/showAllUsers">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"userType" : attributes.queryParams.userType
+}]]]></http:query-params>
+		</http:request>
+	</sub-flow>
+	<sub-flow name="loginUser" doc:id="4d593156-f731-42ff-84cb-458b15c93a1a" >
+		<try doc:name="Try" doc:id="09451652-819f-4ddf-b660-e5bfaf09a0fa" >
+			<http:request method="GET" doc:name="loginUser" doc:id="21b8c8e9-75e2-479a-a420-da7f384a5827" config-ref="HTTP_Request_configuration" path="/user/loginUser">
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	"userPassword" : attributes.queryParams.userPassword,
+	"userName" : attributes.queryParams.userName
+}]]]></http:query-params>
+		</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e7c52e84-ea48-49c1-8b01-0c4a573723f1" type="HTTP:INTERNAL_SERVER_ERROR">
+					<ee:transform doc:name="Transform Message" doc:id="67f86940-0c9a-4ec3-bef7-1401f1a1e114" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid username or password"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showById" doc:id="a6795c88-8b3f-4e9f-8e2e-848d27a81a26" >
+		<try doc:name="Try" doc:id="ffc18d72-84b0-4efc-ad15-161d09b3d03d" >
+			<set-variable value="#[vars.userId]" doc:name="Set Variable" doc:id="89d83a98-b8c8-4936-b7c0-e7d950749f91" variableName="data" />
+			<validation:is-not-null doc:name="Id not null" doc:id="d8d7024f-44d6-4adf-907d-46e3f09993c8" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:NULL" targetType="ID:NULL" />
+			</validation:is-not-null>
+			<validation:is-number doc:name="Id is number" doc:id="c6437895-51ea-4e0e-825a-ea686e4b9c60" value="#[vars.userId]" numberType="LONG">
+			<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+		</validation:is-number>
+			<http:request method="GET" doc:name="Request" doc:id="fc8c43f9-280e-4d14-a143-6c3bec2f2842" path="/user/showById/{userId}" config-ref="HTTP_Request_configuration">
+			<error-mapping sourceType="HTTP:NOT_FOUND" targetType="USER:NOT_FOUND" />
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"userId" : vars.userId
+}]]]></http:uri-params>
+		</http:request>
+		</try>
+	</sub-flow>
+	<sub-flow name="showByEmail" doc:id="7b25eb60-9243-4bbf-a5a4-67d7ce5fca5a" >
+		<try doc:name="Try" doc:id="f2855acc-c3cd-4344-b616-e2abdd2a49a0" >
+			<set-variable value="#[vars.email]" doc:name="Set Variable" doc:id="c0a29a11-78f1-4948-b405-f84d1d29f306" variableName="data" />
+			<validation:is-not-blank-string doc:name="Email not blank" doc:id="75d6debe-5cca-41a1-9572-0e50c2e18a5b" value="#[vars.email]"/>
+			<validation:is-email doc:name="Is email" doc:id="86658c5e-5c7c-438d-8056-3a0059ecddc8" email="#[vars.email]"/>
+			<http:request method="GET" doc:name="Request" doc:id="70b71f0e-eb21-4ad6-967e-adf2c693ed52" path="/user/showByEmail/{Email}" config-ref="HTTP_Request_configuration">
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"Email" : vars.email
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c39559ce-a538-420c-b2da-6b6e4158a4e3" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="85729de3-5ed1-4b31-bed9-3f0f58406b72" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Email is a blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1e53e853-55cd-4403-a6e6-d75ef30d2b91" type="VALIDATION:INVALID_EMAIL">
+					<ee:transform doc:name="Transform Message" doc:id="4547bb30-8000-42d0-a758-f66651824071" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Email is not valid"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showByUserName" doc:id="bfcb5d67-2912-4464-b029-68482e68996a" >
+		<try doc:name="Try" doc:id="d62346d2-b7a1-4075-8379-f6b54b1fc24b" >
+			<set-variable value="#[vars.userName]" doc:name="Set Variable" doc:id="5c8728a0-e79b-4bf9-9043-57bd6c15a84d" variableName="data" />
+			<validation:is-not-blank-string doc:name="UserName not blank" doc:id="c34905eb-f38f-4fda-ae99-280d11ce3a5b" value="#[vars.userName]" />
+			<validation:is-not-null doc:name="Name not null" doc:id="da8d4475-224f-4667-b68f-7c45beaee7b5" value="#[vars.userName]">
+				<error-mapping sourceType="VALIDATION:NULL" targetType="ID:NULL" />
+			</validation:is-not-null>
+			<http:request method="GET" doc:name="Request" doc:id="f09b00d3-1860-4df2-bb69-282becc1418f" config-ref="HTTP_Request_configuration" path="/user/showByUserName/{Name}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="USER:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"Name" : vars.userName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="11c5dad2-3adc-454a-85c9-6b558c767f44" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="53c4f8c2-1ca7-48b3-a846-27dda0ec9700" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Email is a blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="patchUser" doc:id="bdd48da3-5077-4aae-af3f-1d9ac23b2999" >
+		<try doc:name="Try" doc:id="2048be3f-192b-465a-9dd7-9f171910e50c" >
+			<set-variable value="#[vars.userId]" doc:name="Set Variable" doc:id="ff231ce5-f194-4afb-b135-80a08e652154" variableName="data" />
+			<validation:is-not-null doc:name="Id not null" doc:id="066ef25a-dd71-4885-9907-57f9de9b2406" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:NULL" targetType="ID:NULL" />
+			</validation:is-not-null>
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="85da8237-6108-4bbc-945d-3006dc726c0c" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="PATCH" doc:name="patchUser" doc:id="470ac5ae-9924-4e46-90f8-3a31ebac4a22" config-ref="HTTP_Request_configuration" path="/user/patchUser/{userId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="USER:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"userId" : vars.userId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="8e54cdbb-7957-4608-988b-7dde8f771690" type="HTTP:INTERNAL_SERVER_ERROR" >
+					<ee:transform doc:name="Transform Message" doc:id="c59570e2-0a9b-40c3-867c-f206244e5a85" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid data to patch a User Account" 
+}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables >
+							<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+							<ee:set-variable variableName="message" ><![CDATA["Not Found"]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="addUser" doc:id="f9e13548-a3e1-4ff7-aec0-02f6de316f5f" >
+		<try doc:name="Try" doc:id="8881817a-b11e-4df8-8c42-17a2639d1a9e" >
+			<validation:is-not-blank-string doc:name="Name not blank string" doc:id="bea50b17-4e51-470b-95e0-b7e3a422f576" value="#[payload.userName]" />
+			<validation:is-not-blank-string doc:name="UserType not blank string" doc:id="344ddcf3-7cac-436a-8460-b999fc35ef8e" value="#[payload.userType]" />
+			<validation:is-true doc:name="Type Is admin or customer" doc:id="3302fa37-8d6c-47fc-bfa4-091a9ea9c09f" expression="#[payload.userType=='Admin' or payload.userType=='Customer']"/>
+			<validation:is-not-blank-string doc:name="Password not blank string" doc:id="c5a8cc9c-dd42-4ace-80a3-3b933f67913a" value="#[payload.userPassword]" />
+			<validation:is-not-blank-string doc:name="email not blank string" doc:id="c998f9df-61d5-4d08-9a2e-d93affdb4c2f" value="#[payload.email]" />
+			<validation:is-email doc:name="Is email" doc:id="dc996329-fd23-4c33-80fd-e1d06ba7f368" email="#[payload.email]" />
+			<validation:matches-regex doc:name="Matches regex" doc:id="6015f76a-3d21-4fb4-92be-63c07daf6409" value="#[payload.userPhone]" regex="^[0-9]{10}$" />
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="fd116084-6020-4597-ad1d-745029461f93" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="90587a72-c095-411d-bedc-82a2d5837978" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Username or UserType or UserPassword or email is blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="8c1c79e3-0fa3-472a-85f6-637882b729bd" type="VALIDATION:INVALID_EMAIL" >
+					<ee:transform doc:name="Transform Message" doc:id="aec2a0fa-75a1-4b1f-b67e-5c842791fcb7" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Email is not valid"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="83b4b38d-53ff-4e67-b9bf-772076f20e40" type="VALIDATION:MISMATCH" >
+					<ee:transform doc:name="Transform Message" doc:id="c2daaf28-8870-41d1-b696-5042b81180dc" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "PhoneNo must be 10 digits"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e86250b6-b45d-448a-b660-0b3228760f06" type="VALIDATION:INVALID_BOOLEAN">
+					<ee:transform doc:name="Transform Message" doc:id="130773b8-de08-4bd4-a871-8358ff0d16c8" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "User type should be Admin or Customer"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<http:request method="POST" doc:name="addUser" doc:id="128f77c1-2e03-4f02-9194-7f210363073d" config-ref="HTTP_Request_configuration" path="/user/addUser" >
+		</http:request>
+	</sub-flow>
+	<sub-flow name="deleteUser" doc:id="04b619d7-388e-44f3-953e-842ced81451c" >
+		<try doc:name="Try" doc:id="78e0c7f2-237e-4dcf-ba82-92cb4165122a" >
+			<set-variable value="#[vars.userId]" doc:name="Set Variable" doc:id="bce4c770-f931-4dfb-ac8f-f78ad1750dc1" variableName="data" />
+			<validation:is-not-null doc:name="Id not null" doc:id="a65203a2-bffa-4328-9904-29bd0806efaf" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:NULL" targetType="ID:NULL" />
+			</validation:is-not-null>
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="5daacc70-24c5-470a-94bc-abbcc2ca5a85" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="DELETE" doc:name="deleteUser" doc:id="83d3f4cd-bcc3-4d77-bab9-87a0ca21a18e" config-ref="HTTP_Request_configuration" path="/user/deleteUser/{userId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="USER:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"userId" : vars.userId
+}]]]></http:uri-params>
+			</http:request>
+			<set-payload value="User deleted successfully" doc:name="Set Payload" doc:id="36b17290-6917-430b-8022-4cabd5fbd5e4" />
+		</try>
+	</sub-flow>
+	<sub-flow name="modifyUser" doc:id="a1eddd32-3a46-4f56-a6a6-0b3bdf87eaff" >
+		<try doc:name="Try" doc:id="1bedcffc-9249-4b60-9373-d43a9112ed5d" >
+			<set-variable value="#[vars.userId]" doc:name="Set Variable" doc:id="cde963ba-d6c2-4e65-90ce-0fe47fb7ba88" variableName="data" />
+			<validation:is-not-null doc:name="Id not null" doc:id="c8cf99e3-249b-41cd-8800-ea7e341f808b" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:NULL" targetType="ID:NULL" />
+			</validation:is-not-null>
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="cbe191e6-a4d3-4df9-8fd8-f96027cb5e3e" value="#[vars.userId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<validation:matches-regex doc:name="Matches regex" doc:id="65e13fb8-172c-493c-8bad-32879ed4f464" value="#[payload.userPhone]" regex="^[0-9]{10}$" />
+			<validation:is-not-blank-string doc:name="email not blank string" doc:id="9f7ae451-6109-4d4b-b1f1-47f31a5345d6" value="#[payload.email]" />
+			<validation:is-not-blank-string doc:name="Password not blank string" doc:id="376916f2-7579-4487-9455-d0ad09d6bb77" value="#[payload.userPassword]" />
+			<validation:is-not-blank-string doc:name="Type not blank string" doc:id="31643874-8886-4c6f-b98b-b9cf7d172c76" value="#[payload.userType]" />
+			<validation:is-not-blank-string doc:name="Name not blank string" doc:id="3f4add35-5c95-4b11-b705-e04be2483aff" value="#[payload.userName]" />
+			<validation:is-email doc:name="Is email" doc:id="035faa73-f199-4267-a7d4-32bae8ef3f7b" email="#[payload.email]" />
+			<http:request method="PUT" doc:name="modifyUser" doc:id="629d282a-a4f3-41fb-83af-557de4e5f9fc" config-ref="HTTP_Request_configuration" path="/user/modifyUser/{userId}" >
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"userId" : vars.userId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a0b4f762-c83a-4b33-989b-e06c35a74185" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="ed3c88ed-b515-4d12-b890-231b24b2c75d" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Username or UserType or UserPassword or email is blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ef8c0d49-b798-41ed-b076-36bffa33174b" type="VALIDATION:INVALID_EMAIL" >
+					<ee:transform doc:name="Transform Message" doc:id="0a3a097d-e1bf-4185-905a-17ebb4abafa5" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Email is not valid"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="170b18ee-8b99-4d95-88c1-2de979f8dfdd" type="VALIDATION:MISMATCH">
+					<ee:transform doc:name="Transform Message" doc:id="d9139b61-0dea-43ef-95a9-671c73e03b76">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "PhoneNo must be 10 digits"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+</mule>

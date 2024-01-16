@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="showAllAirports" doc:id="e1a7bfe6-a8d1-423d-a624-ba3b3e948aba" >
+		<http:request method="GET" doc:name="showAllAirports" doc:id="7b1a93f9-48d6-4960-8ac8-4a647e7408a2" config-ref="HTTP_Request_configuration" path="/airport/showAllAirports"/>
+	</sub-flow>
+	<sub-flow name="showAirportsInXml" doc:id="6a49e796-8d7a-4cf5-afec-fcec39f5f456" >
+		<http:request method="GET" doc:name="showAllAirports" doc:id="2b0e6a6d-fbf3-4626-ae67-d39d3d13e3d9" config-ref="HTTP_Request_configuration" path="/airport/showAllAirports"/>
+		<ee:transform doc:name="Transform Message" doc:id="c8ce4295-1723-4907-96ac-4e712f8e76f9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+airports: {noOfAirports: sizeOf(payload),
+	(payload map (object, index) ->
+	{
+		airport: {
+			code: object.airportCode,
+			name: object.airportName,
+			location: object.airportLocation
+		}
+	}
+)
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable resource="AirportDWOutput.dwl" variableName="AirportDWOutput" />
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="4bee7cd3-0fc3-4674-bf9e-680060cb03a5" message="#[vars.AirportDWOutput]"/>
+	</sub-flow>
+	<sub-flow name="showAirportById" doc:id="cc100613-f81d-4dc2-a2c9-39f985091972" >
+		<try doc:name="Try" doc:id="d9da1f0c-12d9-44b0-b080-a3afeb1790cb" >
+			<set-variable value="#[vars.airportCode]" doc:name="Set Variable" doc:id="1b5b554e-bad1-4ba7-8ec8-cc0e5e066b5d" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="2444de09-db4e-4179-b61d-c90af248104b" value="#[vars.airportCode]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="GET" doc:name="showAirportById" doc:id="fe531dbb-5c26-4645-981f-fcb5a859aae4" config-ref="HTTP_Request_configuration" path="/airport/showById/{airportCode}">
+			<error-mapping sourceType="HTTP:NOT_FOUND" targetType="AIRPORT:NOT_FOUND" />
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"airportCode" : vars.airportCode
+}]]]></http:uri-params>
+		</http:request>
+		</try>
+	</sub-flow>
+	<sub-flow name="showAirportByName" doc:id="5178b79b-5122-4b54-8bb5-550292d4db8d" >
+		<try doc:name="Try" doc:id="7126e217-66f1-4fa2-950f-35f0f43e17b2" >
+			<set-variable value="#[vars.airportName]" doc:name="Set Variable" doc:id="c1287308-e773-4120-9cbb-089107b36f9e" variableName="data" />
+			<validation:is-not-blank-string doc:name="Name not blank" doc:id="ea8e8225-eefa-4253-8cfc-ada33d942b67" value="#[vars.airportName]"/>
+			<http:request method="GET" doc:name="showAirportByName" doc:id="903e5338-99a8-49b4-8913-f297eef2571d" config-ref="HTTP_Request_configuration" path="/airport/showByName/{airportName}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="AIRPORT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"airportName" : vars.airportName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="43956995-76da-41cd-9d43-793894325e0a" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="e8aeee03-5456-40bc-bce4-3aa4242133b1" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Airport name connot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showAirportByLocation" doc:id="fc8bf899-2ac3-4dbe-a761-c963c6f4b38b" >
+		<try doc:name="Try" doc:id="9f0c0e4a-f2d4-4fcf-abe2-d32beebe5ff6" >
+			<set-variable value="#[vars.airportLocation]" doc:name="Set Variable" doc:id="dfcaa704-bec0-4719-8dee-96c23b8c9553" variableName="data" />
+			<validation:is-not-blank-string doc:name="Location not blank" doc:id="cad6c436-d014-446f-a9ac-3e3708981525" value="#[vars.airportLocation]"/>
+			<http:request method="GET" doc:name="showAirportByLocation" doc:id="992bd954-9e99-4da5-82f3-e806fdb7f492" config-ref="HTTP_Request_configuration" path="/airport/showByLocation/{airportLocation}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="AIRPORT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"airportLocation" : vars.airportLocation
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1694cc88-f39d-4bf9-8e90-1edfcb75024a" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="735539cc-9e0d-467d-a9e3-7c143ceaecb9" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Airport location connot be blank"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="addAirport" doc:id="2667f51d-db4d-4cb0-8e9e-b5e8c8307531">
+		<try doc:name="Try" doc:id="6226c5ac-5fd8-4e5f-b827-4a5993937767">
+			<validation:is-not-blank-string doc:name="Name not blank string" doc:id="ab1c34aa-ac75-4175-b668-2670843dea1c" value="#[payload.airportName]" />
+			<validation:is-not-blank-string doc:name="Location not blank string" doc:id="e55e026a-3997-46f4-bbbd-e994d3fdaa49" value="#[payload.airportLocation]" />
+			<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ba8bc118-7b46-4c52-920d-9b6898b16e07" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="71d6faf4-5dde-4489-a35c-896f886187dc">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Airport name or location is blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<http:request method="POST" doc:name="addAirport" doc:id="3b0bfadd-80c6-439f-be2b-f70a06dd8137" config-ref="HTTP_Request_configuration" path="/airport/addAirport" />
+	</sub-flow>
+	<sub-flow name="modifyAirport" doc:id="d3c8bb72-cb87-4232-b5f3-759bcc62800f">
+		<try doc:name="Try" doc:id="1c080d43-bcf4-4302-aa6c-66d8a50c8add">
+			<set-variable value="#[vars.airportCode]" doc:name="Set Variable" doc:id="ec6fb1c3-bd5a-4dda-b3a2-ed34e165435f" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="62e698dd-c4ca-44fb-9755-68bbd4af80a0" value="#[vars.airportCode]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<validation:is-not-blank-string doc:name="Name not blank string" doc:id="297fbd7b-639c-4c26-ad95-fa788d4efb53" value="#[payload.airportName]" />
+			<validation:is-not-blank-string doc:name="Location not blank string" doc:id="eebb94f2-47cc-4704-8b21-d80cd743a21e" value="#[payload.airportLocation]" />
+			<http:request method="PUT" doc:name="modifyAirport" doc:id="c5c35d61-019e-4191-8e8b-592bed52717a" config-ref="HTTP_Request_configuration" path="/airport/modifyAirport/{airportCode}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="AIRPORT:NOT_FOUND" />
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"airportCode" : vars.airportCode
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2b71af4c-ab40-4106-97f3-fbe7d290d023" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="0b7f6b20-49f0-49bc-92fd-54e105fa433a">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Airport name or location is blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="deleteAirport" doc:id="59c85788-820d-4a49-aa89-ede62e49ae75">
+		<try doc:name="Try" doc:id="72c483a8-38ba-4ba5-99f5-0341041d729d">
+			<set-variable value="#[vars.airportCode]" doc:name="Set Variable" doc:id="1ff5b5c1-0116-46bc-89df-4c76c42e0493" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="6abd4375-1d10-42be-b34e-1dcc444c3d1c" value="#[vars.airportCode]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="DELETE" doc:name="deleteAirport" doc:id="4a07df98-bd21-4c55-ad25-e4765ffc50c1" config-ref="HTTP_Request_configuration" path="/airport/deleteAirport/{airportCode}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="AIRPORT:NOT_FOUND" />
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"airportCode" : vars.airportCode
+}]]]></http:uri-params>
+			</http:request>
+			<set-payload value="Airport deleted successfully" doc:name="Set Payload" doc:id="26df6232-11e5-4bf8-90c0-0651e2ab7153" />
+		</try>
+	</sub-flow>
+	<sub-flow name="patchAirport" doc:id="2e7c01d5-0d1f-412b-89b5-974fd481fb89" >
+		<try doc:name="Try" doc:id="9496b80a-93f7-4864-8474-d8f8afb7d6f1" >
+			<set-variable value="#[vars.airportCode]" doc:name="Set Variable" doc:id="a6fa1a80-ebc4-443d-9940-e01fad9679aa" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="7ade4e1c-a73b-460e-ba00-80d760dc7b76" value="#[vars.airportCode]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="PATCH" doc:name="patchAirport" doc:id="aae48e59-1543-420c-856c-a70f9e553b12" config-ref="HTTP_Request_configuration" path="/airport/patchAirport/{airportCode}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="AIRPORT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"airportCode" : vars.airportCode
+}]]]></http:uri-params>
+			</http:request>
+		</try>
+	</sub-flow>
+</mule>

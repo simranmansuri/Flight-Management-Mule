@@ -1,0 +1,23 @@
+%dw 2.0
+
+type auto_a3facf19_516e_441e_bc2c_15cc47154349_Input_Attributes = {|
+  clientCertificate?: {|
+    publicKey?: {|  |}, 
+    "type"?: String, 
+    encoded?: Binary
+  |}, 
+  headers: {|  |}, 
+  listenerPath: String, 
+  method: String, 
+  queryParams: {|  |}, 
+  queryString: String, 
+  relativePath: String, 
+  remoteAddress: String, 
+  requestPath: String, 
+  requestUri: String, 
+  scheme: String, 
+  uriParams: {| pnrNumber: String |}, 
+  version: String, 
+  localAddress: String
+|}
+

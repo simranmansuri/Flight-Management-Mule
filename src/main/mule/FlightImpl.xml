@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="showAllFlights" doc:id="39ba83b6-ae43-405d-a341-b59af6a35b11" >
+		<http:request method="GET" doc:name="showAllFlights" doc:id="5cf4aaf3-ee22-47e4-aa28-318d68c6b45a" config-ref="HTTP_Request_configuration" path="/flight/showAllFlights"/>
+	</sub-flow>
+	<sub-flow name="showByCarrierInXml" doc:id="0dec35c5-ba5a-49ce-8248-1fc1bbf9a392" >
+		<try doc:name="Try" doc:id="f1d2d04d-ef1b-4050-bf13-b0541dfb7374" >
+			<set-variable value="#[vars.carrierName]" doc:name="Set Variable" doc:id="66f10d58-eff1-4de5-85f6-ea4e31151335" variableName="data" />
+			<validation:is-not-blank-string doc:name="Is not blank string" doc:id="f6794fd9-ef59-4dca-bda7-faf8041096a5" value="#[vars.carrierName]" />
+			<http:request method="GET" doc:name="showByCarrierName" doc:id="d7dfa248-fa60-4fd6-815d-c6a8e3f3520c" config-ref="HTTP_Request_configuration" path="/flight/showByCarrierName/{carrierName}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="FLIGHT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"carrierName" : vars.carrierName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="6c5c0937-8c73-4c71-be58-66e34dfb24ef" type="VALIDATION:BLANK_STRING" >
+					<ee:transform doc:name="Transform Message" doc:id="363e76bf-5fa2-4ca7-8896-a250195a9b4d" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "carrier name should not be a blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="39a80c37-d8d5-4904-bfc7-9c26f4402bea">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+---
+flights: {noOfFlights: sizeOf(payload),
+	(payload map (object, index) ->
+	{
+		flight: {
+			number: object.flightNumber,
+	        name: object.carrierName,
+	        model: object.flightModel,
+	        seatcapacity: object.seatCapacity
+		}
+	}
+)
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable resource="FlightDWoutput.dwl" variableName="FlightDWoutput" />
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="fcebf222-e716-4c1a-94db-f46ae9b43ed1" message="#[vars.FlightDWOutput]" />
+	</sub-flow>
+	<sub-flow name="patchFlight" doc:id="e0eb66c5-1295-4e8f-94d7-fe6f6c6366a1" >
+		<try doc:name="Try" doc:id="2b277511-4aae-408c-8a60-6ea134e25c27" >
+			<set-variable value="#[vars.flightNumber]" doc:name="Set Variable" doc:id="ab3564f8-2290-4f74-8ada-b16c26b467a5" variableName="data"/>
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="055e87e4-b8c2-421f-a8b0-3977d4fc3d89" value="#[vars.flightNumber]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<validation:is-true doc:name="seatCapacity validation" doc:id="18bc0e98-2899-435a-81d3-cbf712ac9527" expression="#[attributes.queryParams.seatCapacity&gt;30 and attributes.queryParams.seatCapacity&lt;250]" />
+			<http:request method="PATCH" doc:name="patchFlight" doc:id="291816c2-b418-45fe-8e50-ab5ad74e066e" config-ref="HTTP_Request_configuration" path="/flight/patchFlight/{fno}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="FLIGHT:NOT FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"fno" : vars.flightNumber
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cbf4b006-2221-4280-9d86-861d3abfb34f" type="HTTP:INTERNAL_SERVER_ERROR" >
+					<ee:transform doc:name="Transform Message" doc:id="ee9cd9f2-de78-49aa-85f6-57fceca4944c" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid flight data given for patch"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="66809555-a39c-4988-be14-491ad28d94ad" type="VALIDATION:INVALID_BOOLEAN" >
+					<ee:transform doc:name="Transform Message" doc:id="fc92ffa1-fcc0-42fb-a95e-18dcdcfb54ba" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "seat capacity should be in between 30 and 250"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="addFlight" doc:id="acb44365-363c-4a90-8702-1b2e39a35742" >
+		<try doc:name="Try" doc:id="ec386020-573c-4588-ab75-f470a7ca565c" >
+			<validation:is-not-blank-string doc:name="Name not blank string" doc:id="ac96b1f7-a49a-43f7-a28d-0c086530d79c" value="#[payload.carrierName]"/>
+			<validation:is-not-blank-string doc:name="Model not blank string" doc:id="e2218644-b778-4775-b86d-8dba97819c4d" value="#[payload.flightModel]"/>
+			<validation:is-number doc:name="SeatCapacity is number" doc:id="84f81da5-9382-4920-8c37-93f114d64332" value="#[payload.seatCapacity]" numberType="LONG">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<validation:is-true doc:name="seatCapacity validation" doc:id="c8b664e5-d613-40a5-b19a-2ced7660e1a2" expression="#[payload.seatCapacity&gt;30 and payload.seatCapacity&lt;250]"/>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="094f6cf3-6984-4655-96e8-270e035a42da" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="d43df946-ce21-4c24-83c7-82407a4bb7f4" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Flight name or model is blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="23cabfe8-b6ae-463d-aaed-72f2125c159e" type="VALIDATION:INVALID_BOOLEAN">
+					<ee:transform doc:name="Transform Message" doc:id="6e375501-9ae8-45b6-b082-167ee84ccf05" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "seat capacity should be in between 30 and 250"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<http:request method="POST" doc:name="addFlight" doc:id="73b04743-d462-4fd2-8392-d91008953fab" config-ref="HTTP_Request_configuration" path="/flight/addFlight"/>
+	</sub-flow>
+	<sub-flow name="deleteFlight" doc:id="56b3f42c-e853-4001-8e2d-31a435483dbb" >
+		<try doc:name="Try" doc:id="bb4b6c36-faed-46b1-b872-e0ea8e5c15b9" >
+			<set-variable value="#[vars.flightNumber]" doc:name="Set Variable" doc:id="a4fdbb97-1f84-4a43-ab1b-02a103f2ae2d" variableName="data"/>
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="697ceeb1-8447-465c-acb9-be20ba321bf3" value="#[vars.flightNumber]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="DELETE" doc:name="deleteFlight" doc:id="e0355df5-b1e6-4e96-8a6c-8bf4683e9395" config-ref="HTTP_Request_configuration" path="/flight/deleteFlight/{fno}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="FLIGHT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"fno" : vars.flightNumber
+}]]]></http:uri-params>
+			</http:request>
+			<set-payload value="Flight deleted successfully" doc:name="Set Payload" doc:id="9cb74f40-0b6a-4000-8b09-3c2464c3bd68" />
+		</try>
+	</sub-flow>
+	<sub-flow name="showFlightById" doc:id="3576600d-83ca-49ec-85e4-51b04aac05bf" >
+		<try doc:name="Try" doc:id="6f8be8ab-bea2-461d-8c8b-a6c520339913" >
+			<set-variable value="#[vars.flightNumber]" doc:name="Set Variable" doc:id="43a1cde0-9227-4526-9d5b-ad31de6de5bb" variableName="data"/>
+			<validation:is-number numberType="LONG" doc:name="Is is number" doc:id="ec2b85b6-1376-440e-9da5-238920203566" value="#[vars.flightNumber]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="GET" doc:name="showByFlightId" doc:id="2111a937-2106-4bbc-b55b-4bf8c4243de5" config-ref="HTTP_Request_configuration" path="/flight/showById/{fno}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="FLIGHT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"fno" : vars.flightNumber
+}]]]></http:uri-params>
+			</http:request>
+		</try>
+	</sub-flow>
+	<sub-flow name="modifyFlight" doc:id="ca00dfe6-8aad-4e99-9bb1-9dd8789c8354" >
+		<try doc:name="Try" doc:id="8771bcf0-1bf5-4cf0-8a6b-03d8e8de5972" >
+			<set-variable value="#[vars.flightNumber]" doc:name="Set Variable" doc:id="f7cfe469-f0a5-47c9-a88b-c9386a90842b" variableName="data"/>
+			<validation:is-not-blank-string doc:name="Name not blank string" doc:id="cce5012a-ef65-4f2d-bb0c-32b394d9ea6c" value="#[payload.carrierName]"/>
+			<validation:is-not-blank-string doc:name="Model not blank string" doc:id="2daa3d08-bc2d-4adb-980c-93cdd70e3b4d" value="#[payload.flightModel]"/>
+			<validation:is-number numberType="LONG" doc:name="SeatCapacity is number" doc:id="1ffba8bf-e7b4-4bb7-801c-ca243c08f671" value="#[payload.seatCapacity]">
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INAVLID_NUMBER" />
+			</validation:is-number>
+			<validation:is-true doc:name="seatCapacity validation" doc:id="8ce595df-7a76-49a6-a2b8-1acee1a44a3f" expression="#[payload.seatCapacity&gt;30 and payload.seatCapacity&lt;250]" />
+			<http:request method="PUT" doc:name="modifyFlight" doc:id="ad758983-a159-4086-a054-2e63af8630f6" config-ref="HTTP_Request_configuration" path="/flight/modifyFlight/{fno}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="FLIGHT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"fno" : vars.flightNumber
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2c5f9a53-2f04-472c-823c-d30ba61398fa" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="d3cf411f-6d2e-481a-a129-5ebf0066a021" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Flight name or model is blank string "
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="3b9ae6d1-1c55-4050-9c7e-f1f13e79662b" type="VALIDATION:INVALID_BOOLEAN" >
+					<ee:transform doc:name="Transform Message" doc:id="002bd2fa-aa87-4d21-9f03-7e3d8e0bdcf4" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "seat capacity should be in between 30 and 250"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="showByCarrierName" doc:id="ee54858e-ac19-419d-bdc5-4299c795ad58" >
+		<try doc:name="Try" doc:id="dfb448d3-fc34-4077-b589-0a356145e42d" >
+			<set-variable value="#[vars.carrierName]" doc:name="Set Variable" doc:id="4309f50a-8df3-4c94-a23f-e3a7957a8ecb" variableName="data"/>
+			<validation:is-not-blank-string doc:name="Is not blank string" doc:id="13cd14de-c5e3-49eb-8cf7-58b50016d70a" value="#[vars.carrierName]"/>
+			<http:request method="GET" doc:name="showByCarrierName" doc:id="96f365f6-8098-4fae-9881-a0625d10937d" config-ref="HTTP_Request_configuration" path="/flight/showByCarrierName/{carrierName}">
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="FLIGHT:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"carrierName" : vars.carrierName
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a72a90a2-a5a2-433d-b6b6-a31abe8275e8" type="VALIDATION:BLANK_STRING">
+					<ee:transform doc:name="Transform Message" doc:id="8dc5da4f-dff3-4262-a8b2-cef3be633e88" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "carrier name should not be a blank string"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+</mule>

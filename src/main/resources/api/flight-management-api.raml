@@ -1,0 +1,961 @@
+#%RAML 1.0
+title: Flight Management API
+
+types:
+  Airport: !include DataType/AirportDataType.raml
+  Booking: !include DataType/BookingDataType.raml
+  Passenger: !include DataType/PassengerDataType.raml
+  Schedule: !include DataType/ScheduleDataType.raml
+  ScheduledFlight: !include DataType/ScheduledFlightDataType.raml
+  User: !include DataType/UserDataType.raml
+  Flight: !include DataType/FlightDataType.raml
+
+/api:
+  /airport:
+    /showAllAirports:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Airport[]
+                example: !include Examples/AirportGetAllExample.raml
+    
+    /showAirportsInXml:
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: Airport[]
+
+    /addAirport:
+      post:
+        body:
+          application/json:
+            type: Airport
+            example: !include Examples/AirportPostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: Airport added
+  
+    /showById/{airportCode}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Airport
+                example: !include Examples/AirportExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Airport not found
+
+    /modifyAirport/{airportCode}:
+      put:
+        body:
+          application/json:
+            type: Airport
+            example: !include Examples/AirportExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Airport updated
+          400:
+            body:
+              application/json:
+                example:
+                  message: Airport not found
+
+    /deleteAirport/{airportCode}:
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Airport deleted
+          400:
+            body:
+              application/json:
+                example:
+                  message: Airport not found
+
+    /patchAirport/{airportCode}:
+      patch:
+        queryParameters:
+          airportName:
+            required: false
+          airportLocation:
+            required: false
+        responses:
+            200:
+              body:
+                application/json:
+                  example:
+                    message: Airport patched
+            400:
+              body:
+                application/json:
+                  example:
+                    message: Airport not found
+
+    /showByLocation/{airportLocation}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Airport[]
+                example: !include Examples/AirportGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Airport not found
+                
+    /showByName/{airportName}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Airport
+                example: !include Examples/AirportExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Airport not found
+
+  /schedule:
+    /showAllSchedules:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Schedule[]
+                example: !include Examples/ScheduleGetAllExample.raml
+
+    /addSchedule:
+      post:
+        body:
+          application/json:
+            type: Schedule
+            example: !include Examples/SchedulePostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: Schedule added
+  
+    /showById/{scheduleId}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Schedule
+                example: !include Examples/ScheduleExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+  
+    /modifySchedule/{scheduleId}:
+      put:
+        body:
+          application/json:
+            type: Schedule
+            example: !include Examples/ScheduleExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Schedule updated
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+  
+    /deleteSchedule/{scheduleId}:
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Schedule deleted
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+
+    /patchSchedule/{scheduleId}:
+      patch:
+        queryParameters:
+          arrivalTime:
+            required: false
+          departureTime:
+            required: false
+          destinationId:
+            required: false
+          sourceId:
+            required: false
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Schedule patched
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+
+    /showBySource/{airportName}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Schedule[]
+                example: !include Examples/ScheduleGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+
+    /showByDestination/{airportName}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Schedule[]
+                example: !include Examples/ScheduleGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+              
+    /showByArrival/{arrivalDate}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Schedule[]
+                example: !include Examples/ScheduleGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+  
+    /showByDeparture/{departureDate}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Schedule[]
+                example: !include Examples/ScheduleGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+    
+    /showBySourceInXml/{airportName}:
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: Schedule[]
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+
+    /showByDepartureInXml/{departureDate}:
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: Schedule[]
+          400:
+            body:
+              application/json:
+                example:
+                  message: Schedule not found
+
+  /passenger:
+    /showAllPassengers:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Passenger[]
+                example: !include Examples/PassengerGetAllExample.raml
+
+    /addPassenger/{bookingId}:
+      post:
+        body:
+          application/json:
+            type: Passenger
+            example: !include Examples/PassengerPostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: Passenger added
+  
+    /showById/{pnrNumber}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Passenger
+                example: !include Examples/PassengerExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+  
+    /modifyPassenger/{pnrNumber}:
+      put:
+        body:
+          application/json:
+            type: Passenger
+            example: !include Examples/PassengerExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Passenger updated
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+  
+    /deletePassenger/{pnrNumber}:
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Passenger deleted
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+
+    /patchPassenger/{pnrNumber}:
+      patch:
+        queryParameters:
+          passengerName:
+            required: false
+          passengerAge:
+            required: false
+          passengerUIN:
+            required: false
+          luggage:
+            required: false
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Passenger patched
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+
+    /showByName/{passengerName}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Passenger[]
+                example: !include Examples/PassengerGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+  
+    /showByUIN/{passengerUIN}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Passenger[]
+                example: !include Examples/PassengerGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+
+    /showByBookingId/{bookingId}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Passenger[]
+                example: !include Examples/PassengerGetAllExample.raml
+
+    /showByBookingInXml/{bookingId}:
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: Passenger[]
+
+  /user:
+    /loginUser:
+      get:
+        queryParameters:
+          userName:
+            required: true
+          userPassword:
+            required: true
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Welcome user
+          500:
+            body:
+              application/json:
+                example:
+                  message: Invalid username or password
+
+    /showAllUsers:
+      get:
+        description: User details
+        queryParameters:
+          userType:
+            required: true
+            enum:
+              - Admin
+              - Customer
+        responses:
+          200:
+            body:
+              application/json:
+                type: User[]
+                example: !include Examples/UserGetAllExample.raml
+
+    /showUsersInXml:
+      get:
+        description: User details
+        queryParameters:
+          userType:
+            required: true
+            enum:
+              - Admin
+              - Customer
+        responses:
+          200:
+            body:
+              application/xml:
+                type: User[]
+
+    /addUser:            
+      post:
+        body:
+          application/json:
+            type: User
+            example:  !include Examples/UserPostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: User added
+
+    /showById/{userId}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: User
+                example: !include Examples/UserExample.raml        
+          400:
+            body:
+              application/json:
+                example:
+                  message: User not found
+  
+    /deleteUser/{userId}:
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: User deleted 
+          400:
+            body:
+              application/json:
+                example:
+                  message: User not found
+
+    /modifyUser/{userId}:               
+      put:
+        body:
+          application/json:
+            type: User
+            example: !include Examples/UserExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: User updated
+          400:
+            body:
+              application/json:
+                example:
+                  message: User not found
+  
+    /patchUser/{userId}:
+      patch:
+        queryParameters:
+          userType: 
+            required: false
+          userName:
+            required: false
+          userPassword: 
+            required: false
+          userPhone:
+            required: false
+          email:
+            required: false
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: User updated
+          400:
+            body:
+              application/json:
+                example:
+                  message: User not found
+
+    /showByName/{userName}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: User
+                example: !include Examples/UserExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: User not found
+
+    /showByEmail/{email}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: User
+                example: !include Examples/UserExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: User not found
+
+  /scheduledflight :
+    /showAllSchFlights :
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type : ScheduledFlight[]
+                example : !include /Examples/ScheduledFlightsGetAllExample.raml
+
+    /addSchFlight :
+      post:
+        body:
+          application/json:
+            type: ScheduledFlight
+            example : !include /Examples/ScheduledFlightPostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: ScheduledFlight added
+  
+    /showByFno/{flightNumber}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: ScheduledFlight
+                example : !include /Examples/ScheduledFlightExample.raml
+          400 :
+            body:
+              application/json:
+                example:
+                  message : ScheduledFlight not found 
+      
+    /modifySchFlight/{sfid}:
+      put:
+        body:
+          application/json:
+            type: ScheduledFlight
+            example: !include /Examples/ScheduledFlightExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example : 
+                  message : ScheduledFlight updated
+          400 :
+            body:
+              application/json:
+                example:
+                  message : ScheduledFlight not found
+
+    /deleteSchFlight/{sfid} :
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message : ScheduledFlight deleted
+          400 :
+            body:
+              application/json:
+                example:
+                  message : ScheduledFlight not found
+
+    /patchSchFlight/{sfid} :
+      patch:
+        queryParameters:
+          availableSeats :
+            required: false
+          flightId:
+            required: false
+        responses:
+            200:
+              body:
+                application/json:
+                  example:
+                    message : ScheduledFlight patched   
+            400:
+              body:
+                application/json:
+                  example:
+                    message : ScheduledFlight not found
+
+    /showByAirport/{src}/{dsc}/{date} :
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: ScheduledFlight[]
+                example : !include /Examples/ScheduledFlightsGetAllExample.raml
+          400 :
+            body:
+              application/json:
+                example:
+                  message : ScheduledFlight not found
+    
+    /showByAirportInXml/{src}/{dsc}/{date} :
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: ScheduledFlight[]
+          400:
+            body:
+              application/json:
+                example:
+                  message: Scheduled flight not found
+
+  /booking:
+    /showAllBookings:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type : Booking[]
+                example: !include Examples/BookingGetAllExample.raml
+            
+    /addBooking:
+      post:
+        body:
+          application/json:
+            type: Booking
+            example: !include Examples/BookingPostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: Booking added
+
+    /showById/{bookingId}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Booking
+                example: !include Examples/BookingExample.raml
+                  
+          400:
+            body:
+              application/json:
+                example:
+                  message: Booking not found
+
+    /showBySfid/{sfid}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Passenger[]
+                example: !include Examples/PassengerGetAllExample.raml
+
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+
+    /showBySfidInXml/{sfid}:
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: Passenger[]
+          400:
+            body:
+              application/json:
+                example:
+                  message: Passenger not found
+
+    /modifyBooking/{bookingId}:
+      put:
+        body:
+          application/json:
+            type: Booking
+            example: !include Examples/BookingExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example: 
+                  message: Booking updated
+          400:
+            body:
+              application/json:
+                example:
+                  message: Booking not found
+
+    /patchbooking/{bookingId}:
+      patch:
+        queryParameters:
+          noOfPassengers: 
+            required: false
+          sfid:
+            required: true
+          userID:
+            required: true
+        body:
+          application/json:
+            type: Passenger[]
+            example: !include Examples/PassengerGetAllExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Booking patched
+          400:
+            body:
+              application/json:
+                example:
+                  message: Booking not found
+      
+    /deleteBooking/{bookingId} :
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Booking deleted
+          400:
+            body:
+              application/json:
+                example:
+                  message: Booking not found  
+
+  /flights:
+    /showAllFlights :
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Flight[]
+                example: !include /Examples/FlightGetAllExample.raml
+
+    /addFlight:            
+      post:
+        body:
+          application/json:
+            type: Flight
+            example: !include /Examples/FlightPostExample.raml
+        responses:
+          201:
+            body:
+              application/json:
+                example:
+                  message: Flight added
+
+    /showByFno/{flightNumber}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Flight
+                example : !include /Examples/FlightExample.raml
+          400 :
+            body:
+              application/json:
+                example:
+                  message : Flight not found
+
+    /deleteByFno/{flightNumber}:        
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example: 
+                  message: Flight deleted
+          400 :
+            body:
+              application/json:
+                example:
+                  message : Flight not found
+  
+    /modifyFlight/{flightNumber}:
+      put:
+        body:
+          application/json:
+            type: Flight
+            example: !include /Examples/FlightExample.raml
+        responses:
+          200:
+            body:
+              application/json:
+                example:
+                  message: Flight updated 
+          400 :
+            body:
+              application/json:
+                example:
+                  message : Flight not found
+
+    /patchFlight/{flightNumber}:
+      patch:
+        queryParameters:
+          seatCapacity :
+            required: false
+        responses:
+            200:
+              body:
+                application/json:
+                  example:
+                    message : Flight patched   
+            400:
+              body:
+                application/json:
+                  example:
+                    message : Flight not found
+
+    /showByCarrierName/{carrierName}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: Flight[]
+                example: !include /Examples/FlightGetAllExample.raml
+          400:
+            body:
+              application/json:
+                example:
+                  message: Flight not found
+
+    /showByCarrierInXml/{carrierName}:
+      get:
+        responses:
+          200:
+            body:
+              application/xml:
+                type: Flight[]
+          400:
+            body:
+              application/json:
+                example:
+                  message: Flight not found             

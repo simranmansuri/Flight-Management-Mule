@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="showAllBookings" doc:id="3ce36e89-d379-4e9a-97b3-f708a763bf7a" >
+		<http:request method="GET" doc:name="showAllBookings" doc:id="64ff6a92-37bc-4c5a-9202-255ad867558d" config-ref="HTTP_Request_configuration" path="/booking/showAllBookings" />
+	</sub-flow>
+	<sub-flow name="showBookingsBySfidInXML" doc:id="bfcc7a56-8683-4ce8-aae8-a4f7f319ce57" >
+		<try doc:name="Try" doc:id="0fd127a2-61ca-4253-b1ad-f892b8021afa" >
+			<set-variable value="#[vars.sfid]" doc:name="Set Variable" doc:id="c176285a-99d4-44e1-80be-88641cda081d" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="0a7ea349-05ee-4b0a-9b20-5a2cb9a071fa" value="#[vars.sfid]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="GET" doc:name="showBookingBySfid" doc:id="e32cc963-9d2b-4b60-982d-5eda4e154492" config-ref="HTTP_Request_configuration" path="/booking/showBySfid/{sfid}" >
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"sfid" : vars.sfid
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="bc97f5e9-921b-4fc9-9297-0b42e2af7390" type="HTTP:NOT_FOUND" >
+					<ee:transform doc:name="Transform Message" doc:id="75a2515e-d2ae-4eec-a8be-44d09aaa9592" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No booking found for " ++ vars.sfid as String
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="6313ac3d-11a4-45f2-8666-e36e217fbf08" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+passengers: {noOfPassengers: sizeOf(payload),
+	(payload map (object, index) ->
+	{
+		passenger: {
+			pnr: object.pnrNumber,
+			name: object.passengerName,
+			age: object.passengerAge,
+			uin: object.passengerUIN,
+			luggage: object.luggage
+			
+		}
+	}
+)
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable resource="BookingDWOutput.dwl" variableName="BookingDWOutput" />
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="a8986377-db3b-426c-ad04-3552ad1a5344" message="#[vars.BookingDWOutput]"/>
+	</sub-flow>
+	<sub-flow name="showBookingById" doc:id="3250ce46-b745-475a-8fa6-ab8221e1a981" >
+		<try doc:name="Try" doc:id="e478d605-62ea-4c34-9fbd-5c171707c673" >
+			<set-variable value="#[vars.bookingId]" doc:name="Set Variable" doc:id="ebf9fc63-b9d9-4f84-bb45-4ad31ae4cb8a" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="69355c35-92bf-48c9-85e1-e87e425b221b" value="#[vars.bookingId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="GET" doc:name="showBookingById" doc:id="f21d1813-4f9f-4929-b135-e046266deb7e" config-ref="HTTP_Request_configuration" path="/booking/showById/{bookingId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="BOOKING:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"bookingId" : vars.bookingId
+}]]]></http:uri-params>
+			</http:request>
+		</try>
+	</sub-flow>
+	<sub-flow name="showBookingBySfid" doc:id="04cf1019-5a14-417b-8b79-f026fe5d4049" >
+		<try doc:name="Try" doc:id="2be963d9-3cd6-45d6-a3ea-82bb8a915110" >
+			<set-variable value="#[vars.sfid]" doc:name="Set Variable" doc:id="97d94237-2d63-4d98-9255-9108ba3a33cc" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="e7738a26-3f0d-4000-99f9-933b28c580a3" value="#[vars.sfid]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="GET" doc:name="showBookingBySfid" doc:id="39c1ab46-47eb-4de2-89ce-4485d6f37892" config-ref="HTTP_Request_configuration" path="/booking/showBySfid/{sfid}" >
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"sfid" : vars.sfid
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="bd4a158c-472b-4c6a-b854-d72393fcb541" type="HTTP:NOT_FOUND" >
+					<ee:transform doc:name="Transform Message" doc:id="42ae5ea8-e12a-4907-9b34-c6445b3bc561" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No booking found for " ++ vars.sfid as String
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="addBooking" doc:id="d7bd7131-2457-47c2-a1e7-f10bfb1a7649" >
+		<try doc:name="Try" doc:id="1ee84699-8dfa-4a64-a6cc-338db793111c" >
+			<validation:is-true doc:name="Is nop valid" doc:id="70ee73b8-64e8-4425-8dcd-7a03e84ef11a" expression="#[payload.noOfPassengers&gt;=1 and  payload.noOfPassengers&lt;=payload.flight.availableSeats and payload.noOfPassengers&lt;=4 and sizeOf(payload.passengerList)==payload.noOfPassengers]" />
+			<http:request method="POST" doc:name="addBooking" doc:id="22bd8e06-3094-46b4-a157-a28cb6adc721" config-ref="HTTP_Request_configuration" path="/booking/addBooking" />
+			<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="567e4407-2ce0-4cea-8ff0-0a017789e6ae" type="VALIDATION:INVALID_BOOLEAN" >
+					<ee:transform doc:name="Transform Message" doc:id="61a7a19a-27aa-45ce-a00d-dee80e481e4a" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Number of passengers should be valid."
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="8977856c-b88d-43c9-9279-289b4f49984d" type="HTTP:INTERNAL_SERVER_ERROR" >
+					<ee:transform doc:name="Transform Message" doc:id="4a810ac8-0c93-4381-bbff-913080fa9f16" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid data given for addBooking."
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="modifyBooking" doc:id="7bfbdd4d-2f29-4395-97e2-6c74d6ca7bfe" >
+		<try doc:name="Try" doc:id="5ca5caa7-88a3-42cc-9b4b-46c04d0f5308" >
+			<set-variable value="#[vars.bookingId]" doc:name="Set Variable" doc:id="54fe708f-092e-450d-88c8-c103b579f8d1" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="8aebbad5-004d-4d9a-b340-87c3dd8207f4" value="#[vars.bookingId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<validation:is-true doc:name="Is nop valid" doc:id="bd8b8ddc-d616-4038-a8b9-1e2d2087f6cc" expression="#[payload.noOfPassengers&gt;=1 and  payload.noOfPassengers&lt;=payload.flight.availableSeats and payload.noOfPassengers&lt;=4 and sizeOf(payload.passengerList)==payload.noOfPassengers]" />
+			<http:request method="PUT" doc:name="modifyBooking" doc:id="bdef7494-fa28-4088-ae19-7150d42b5b64" config-ref="HTTP_Request_configuration" path="/booking/modifyBooking/{bookingId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="BOOKING:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"bookingId" : vars.bookingId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="30bc4cd3-c684-41fc-92d8-79606bf17592" type="VALIDATION:INVALID_BOOLEAN" >
+					<ee:transform doc:name="Transform Message" doc:id="7187e063-b2f6-44dc-9afc-a87ff80bc90b" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Number of passengers should be valid."
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate1" doc:id="98dcb409-fae0-4e76-ad0c-9cb70ff461ea" type="HTTP:INTERNAL_SERVER_ERROR" >
+					<ee:transform doc:name="Transform Message" doc:id="5b3fa4b1-f319-49d2-9bff-e9ebf3d573b4" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid data given for modifyBooking."
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="patchBooking" doc:id="f8d5a699-c6a3-4e7e-826d-114e408ea9b6" >
+		<try doc:name="Try" doc:id="9ccad2fc-fe7e-449c-8a50-ae480099a1f1" >
+			<set-variable value="#[vars.bookingId]" doc:name="Set Variable" doc:id="26af23c9-3d86-483a-8733-a842a1de9db8" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="6187ec1d-537b-459a-af84-c631affc2e82" value="#[vars.bookingId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="PATCH" doc:name="patchBooking" doc:id="a58f505c-0d92-46fb-acff-a92ad2acfc27" config-ref="HTTP_Request_configuration" path="/booking/patchBooking/{bookingId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="BOOKING:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"bookingId" : vars.bookingId
+}]]]></http:uri-params>
+			</http:request>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="dd27b323-c411-4f3d-bd64-a9b0a66f56ae" type="HTTP:INTERNAL_SERVER_ERROR" >
+					<ee:transform doc:name="Transform Message" doc:id="02084d94-99b4-4b48-8dcd-87cc6b2185ca" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Invalid data given for patch."
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+	</sub-flow>
+	<sub-flow name="deleteBooking" doc:id="dabdea7b-ba74-4c68-8302-7320a6e2d917" >
+		<try doc:name="Try" doc:id="5915accc-98ed-4c39-b0e2-932a71d8884f" >
+			<set-variable value="#[vars.bookingId]" doc:name="Set Variable" doc:id="5f86add7-2d48-4ad9-bfbd-ed558fe4586b" variableName="data" />
+			<validation:is-number numberType="LONG" doc:name="Id is number" doc:id="481fefeb-a11f-4aa7-a54d-67b9c4177d99" value="#[vars.bookingId]" >
+				<error-mapping sourceType="VALIDATION:INVALID_NUMBER" targetType="ID:INVALID_NUMBER" />
+			</validation:is-number>
+			<http:request method="DELETE" doc:name="deleteBooking" doc:id="91288ce2-0806-4cc3-9a26-bddac503a9f3" config-ref="HTTP_Request_configuration" path="/booking/deleteBooking/{bookingId}" >
+				<error-mapping sourceType="HTTP:NOT_FOUND" targetType="BOOKING:NOT_FOUND" />
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"bookingId" : vars.bookingId
+}]]]></http:uri-params>
+			</http:request>
+			<set-payload value="Booking deleted successfully" doc:name="Set Payload" doc:id="2c27f8c9-577e-4b63-9698-985f907c2a66" />
+		</try>
+	</sub-flow>
+</mule>

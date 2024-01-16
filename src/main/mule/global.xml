@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<apikit:config name="flight-management-api-config" api="flight-management-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2e9973ea-fb8b-406a-8756-d2a5311831cd" >
+		<http:listener-connection host="0.0.0.0" port="${http.port}" />
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="7ef964cb-ebc5-4dc8-984b-5be32ed2f14f" file="config.yaml" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="55a0df2a-cd8c-446f-8ded-cb410ccdb63d">
+		<http:request-connection host="${sprint.host}" protocol="HTTPS"/>
+	</http:request-config>
+	<configuration doc:name="Configuration" doc:id="0bda68d1-889d-469d-b8db-94222e069765" defaultErrorHandler-ref="globalError_Handler" />
+	<error-handler name="globalError_Handler" doc:id="7b2bc3fd-9b6e-42c0-b86b-81c5801c02de" >
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="58ff25ac-6b95-4778-8842-cc182100e1bf" type="ID:NULL">
+			<ee:transform doc:name="Transform Message" doc:id="931ae32a-3889-477f-a07a-401e39ddc736" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": vars.data as String ++ "is a null value"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="7af82155-9ab5-47e7-965b-e93ede00fa14" type="ID:INVALID_NUMBER" >
+			<ee:transform doc:name="Transform Message" doc:id="24f57b5f-ba4b-40e9-9ed2-cdc285fa695d" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": vars.data as String ++ " should be integer"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3d32a880-2ab9-4ab8-ae98-ecd2c8d7955e" type="USER:NOT_FOUND" >
+			<ee:transform doc:name="Transform Message" doc:id="b6429ca3-7712-44e5-9184-f2e33b703329" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No User found with " ++ vars.data as String
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+					<ee:set-variable variableName="message" ><![CDATA["Not Found"]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="73601b54-4bdb-4b27-bee5-30bf0657fbad" type="AIRPORT:NOT_FOUND">
+			<ee:transform doc:name="Transform Message" doc:id="dd9947ad-7d0d-402f-98ea-3fd741643503">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No airport found for " ++ vars.data as String
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+					<ee:set-variable variableName="message"><![CDATA["Not Found"]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="75369c34-f023-484b-a039-5cdeeee5f604" type="SCHEDULE:NOT_FOUND">
+			<ee:transform doc:name="Transform Message" doc:id="38ffefc9-b1d5-4ba3-b108-59e45dfb8bac">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No schedule found for " ++ vars.data as String
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="7432fa73-5b3f-40f8-b501-0ccb0a24e2c0" type="BOOKING:NOT_FOUND">
+			<ee:transform doc:name="Transform Message" doc:id="cbe0c770-5207-46ef-9966-fa5c8d06bdb6">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No booking found for " ++ vars.data as String
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b9b02eb0-226b-4e2c-bd70-9cad3426715d" type="SCHEDULEDFLIGHT:NOT_FOUND">
+			<ee:transform doc:name="Transform Message" doc:id="63c8b879-dd64-4af7-9cf4-6e3eff2f2d01" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "No Scheduled Flight found for id : " ++ vars.data as String
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="25d9e47a-aa14-49a7-8996-543437f1c9e9" type="PASSENGER:NOT_FOUND">
+			<ee:transform doc:name="Transform Message" doc:id="f93522f7-6883-4727-aa5d-13a779569cfa" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": "Passenger not Found with " ++ vars.data as String
+}
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="09f7ef5c-c6ee-4755-9ab7-68ca1f9c011f" type="FLIGHT:NOT_FOUND">
+			<ee:transform doc:name="Transform Message" doc:id="0df1a249-1983-47ed-98c7-227880fe93bf" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": "Flight not Found with " ++ vars.data as String
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+	
+</error-handler>
+
+</mule>

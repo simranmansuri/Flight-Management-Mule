@@ -1,0 +1,11 @@
+%dw 2.0
+
+type auto_707d8931_be38_4be5_a151_12cbc1ccb45e_Input_Payload = {
+  passengerName: String, 
+  passengerAge: Number, 
+  luggage: Number, 
+  passengerUIN: Number, 
+  pnrNumber: Number, 
+  _?: Any
+}
+
